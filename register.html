@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">        
+        <title>tc Register</title>
+        <link rel="stylesheet" href="water.css">
+    </head>
+    <body>
+        <h1>Register Codes</h1>
+        <p>Input codes list using code, default description, and client name</p>
+        <p>To remove an entry, clear the value for Code.</p>
+        <p>Use the Export/Import function for backup or to run on another computer</p>
+        <p><a href="index.html">tc</a></p>
+        <table>
+            <thead><tr><th>Code</th><th>Description</th><th>Client</th></tr></thead>
+            <tbody></tbody>
+        </table>
+
+        <div>
+            <button id="btnAdd" style="background-color:green">Add Row</button>
+        </div>
+
+        <hr />
+        
+        <div style="text-align: right">
+            <input type="file" hidden style="display:none;visibility:hidden;opacity:0;" id="inputFile" />
+            <button id="btnImport">Import</button>
+            <button id="btnExport">Export</button>
+            <button id="btnSave">Save Changes</button>
+        </div>
+        
+        <template id="trTemplate">
+            <tr>
+                <td data-type="code"><input type="text" /></td>
+                <td data-type="description"><input type="text" /></td>
+                <td data-type="client"><input type="text" /></td>
+            </tr>
+        </template>
+
+        <dialog id="dialogSuccess">
+            <header>Success</header>
+            <p>Saved!</p>
+            <form method="dialog">
+                <button value="register.html">Stay on registration</button>
+                <button value="index.html">Go to tc</button>
+            </form>
+        </dialog>
+
+        <dialog id="dialogWarning">
+            <header>Warning</header>
+            <p>This will overwrite and save over any existing rows on this page.</p>
+            <p>Continue?</p>
+            <form method="dialog">
+                <button value="ok">OK</button>
+                <button value="cancel">Cancel</button>
+            </form>
+        </dialog>
+
+        <script src="fileSaver.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var codes = JSON.parse(localStorage.codes);
+                var tbody = document.getElementsByTagName('tbody')[0];
+
+                for (var i = 0; i < codes.codes.length; i++) {
+                    var clone = document.getElementById('trTemplate').content.cloneNode(true);
+                    clone.querySelector("td[data-type=code] > input").value = codes.codes[i].code;
+                    clone.querySelector("td[data-type=description] > input").value = codes.codes[i].description;
+                    clone.querySelector("td[data-type=client] > input").value = codes.codes[i].client;
+                    tbody.appendChild(clone);
+                }
+            });
+
+            document.getElementById('btnAdd').addEventListener('click', function() {
+                var clone = document.getElementById('trTemplate').content.cloneNode(true);
+                document.getElementsByTagName('tbody')[0].appendChild(clone);
+                var allRows = document.querySelectorAll('tbody tr');
+                allRows[allRows.length - 1].querySelector('input').focus();
+            });
+
+            document.getElementById('btnImport').addEventListener('click', function() {
+                document.getElementById("dialogWarning").showModal();
+            });
+
+            document.getElementById('dialogWarning').addEventListener('close', function(e) {
+                if (e.target.returnValue == "ok") document.getElementById('inputFile').click();
+            });
+
+            document.getElementById('inputFile').addEventListener('change', function(e) {
+                var files = e.target.files; 
+                if (files.length != 1) return;
+
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    var json = event.target.result;
+                    try {
+                        var data = JSON.parse(json);
+                        if (!data.codes) {
+                            throw new Error('No root codes array.  Must have format {"codes": [{"code":"IT Thing","description":"This is the description","client":"P123456:Client Engagement"},...]}');
+                        }
+                        
+                        var tbody = document.getElementsByTagName('tbody')[0];
+                        tbody.innerHTML = '';
+                        
+                        for (var i = 0; i < data.codes.length; i++) {
+                            var clone = document.getElementById('trTemplate').content.cloneNode(true);
+                            clone.querySelector("td[data-type=code] > input").value = data.codes[i].code;
+                            clone.querySelector("td[data-type=description] > input").value = data.codes[i].description;
+                            clone.querySelector("td[data-type=client] > input").value = data.codes[i].client;
+                            tbody.appendChild(clone);
+                        }
+
+                        document.getElementById('btnSave').click();
+                    } catch(ex) {
+                        alert('Failed to import: ' + ex);
+                        return;
+                    }
+                };
+                reader.readAsText(files[0]);
+            }, false);
+
+            document.getElementById('btnExport').addEventListener('click', function() {
+                var codes = getCodesFromInput();
+
+                var blob = new Blob([JSON.stringify(codes)], {type: "application/octet-stream"});
+                saveAs(blob, 'tc registered codes.json');
+            });
+
+            document.getElementById('btnSave').addEventListener('click', function() {
+                var codes = getCodesFromInput();
+
+                localStorage.codes = JSON.stringify(codes);
+
+                document.getElementById("dialogSuccess").showModal();
+            });
+
+            document.getElementById('dialogSuccess').addEventListener('close', function(e) {
+                window.location.href = e.target.returnValue;
+            });
+
+            function getCodesFromInput() {
+                var rows = document.querySelectorAll('tbody > tr');
+                var codes = {codes: []};
+                for (var i = 0; i < rows.length; i++) {
+                    var code = rows[i].querySelector('td[data-type=code] > input').value;
+                    var description = rows[i].querySelector('td[data-type=description] > input').value;
+                    var client = rows[i].querySelector('td[data-type=client] > input').value;
+                    
+                    if (code) codes.codes.push({code: code, description: description, client: client});
+                }
+
+                return codes;
+            }
+
+        </script>
+    </body>
+</html>

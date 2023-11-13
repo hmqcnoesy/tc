@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+        <title>tc</title>
+        <link rel="stylesheet" href="water.css">
+    </head>
+    <body>
+        <h1>tc</h1>
+        <p>
+            You have <span id="spanRegistrationCount" class="error">0</span> codes registered here.  
+            <a href="register.html">Register codes</a>
+            <input type="file" hidden style="display:none;visibility:hidden;opacity:0;" id="inputFile" />
+        </p>
+        <table>
+            <thead><tr><th>Start Time</th><th>Code</th><th>Description</th><th>Client</th><th>Elapsed</th></tr></thead>
+        </table>
+        
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="1"><button data-add>+</button> Mon <span id="spanMonDate"></span></td></tr>
+            </tbody>
+        </table>
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="2"><button data-add>+</button> Tue <span id="spanTueDate"></span></td></tr>
+            </tbody>
+        </table>
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="3"><button data-add>+</button> Wed <span id="spanWedDate"></span></td></tr>
+            </tbody>
+        </table>
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="4"><button data-add>+</button> Thu <span id="spanThuDate"></span></td></tr>
+            </tbody>
+        </table>
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="5"><button data-add>+</button> Fri <span id="spanFriDate"></span></td></tr>
+            </tbody>
+        </table>
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="6"><button data-add>+</button> Sat <span id="spanSatDate"></span></td></tr>
+            </tbody>
+        </table>
+        <table>
+            <tbody>
+                <tr><td colspan="5" data-day="7"><button data-add>+</button> Sun <span id="spanSunDate"></span></td></tr>
+            </tbody>
+        </table>
+
+        <datalist id="codeList"> 
+            <option value="end">end</option> 
+        </datalist> 
+
+        <template id="trTemplate">
+            <tr>
+              <td data-type="start-time"><input type="text" placeholder="0000" /></td>
+              <td data-type="code"><input type="text" list="codeList" placeholder="code" /></td>
+              <td data-type="description"><input type="text" placeholder="description" /></td>
+              <td data-type="client"><input type="text" placeholder="client" /></td>
+              <td data-type="elapsed"><input type="text" readonly /></td>
+              <td><button>x</button></td>
+            </tr>
+        </template>
+
+        
+        <div style="text-align: right">
+            <button id="btnSave">Download CSV</button>
+        </div>
+
+        <script src="fileSaver.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var codes = JSON.parse(localStorage.codes);
+                document.getElementById('spanRegistrationCount').innerHTML = codes.codes.length;
+
+                var datalist = document.getElementById('codeList');
+                for (var i = 0; i < codes.codes.length; i++) {
+                    var option = document.createElement('option');
+                    option.value = codes.codes[i].code;
+                    option.innerHTML = codes.codes[i].code;
+                    datalist.appendChild(option);
+                }
+
+                var buttonsAdd = document.querySelectorAll('button[data-add]');
+                for(var i = 0; i < buttonsAdd.length; i++) {
+                    buttonsAdd[i].addEventListener('click', function(e) {
+                        var td = e.target.parentElement;
+                        var row = td.parentElement;
+                        var tbl = row.parentElement;
+                        var clonedRow = document.getElementById('trTemplate').content.cloneNode(true);
+                        tbl.appendChild(clonedRow);
+                        e.preventDefault();
+                        var addedRow = tbl.querySelector('tr:last-of-type');
+                        addedRow.querySelector('input').focus();
+                        addedRow.querySelectorAll('input')[1].addEventListener('input', inputCode);
+                        addedRow.querySelector('button').addEventListener('click', clickedDelete);
+                    });
+                }
+            });
+
+            document.getElementById('btnSave').addEventListener('click', function() {
+                var csvString = "something,something,something,\r\n";
+
+                var rows = document.querySelectorAll('tbody tr');
+                for (var i = 0; i < rows.length; i++) {
+                    csvString += rows[i].querySelector('[data-type=code] input').value + ",";
+                    csvString += '"' + rows[i].querySelector('[data-type=description] input').value + '",';
+                    csvString += '"' + rows[i].querySelector('[data-type=elapsed] input').value + "\r\n";
+                }
+
+                var blob = new Blob([csvString], {type: "application/octet-stream"});
+                var date = new Date();
+                saveAs(blob, "tc-" + date.getFullYear() + "-" + date.getMonth() + "-" + date.getDate() + ".csv");
+            });
+
+            function inputCode(e) {
+                var codeAsInput = e.target.value;
+                var codes = JSON.parse(localStorage.codes);
+                var matchingCode = codes.codes.find(o => o.code.toLowerCase() === codeAsInput.toLowerCase());
+                if (!matchingCode) return;
+                
+                var tr = e.target.parentElement.parentElement;
+                var inputDescription = tr.querySelectorAll('input')[2];
+                inputDescription.value = matchingCode.description;
+                var inputClient = tr.querySelectorAll('input')[3];
+                inputClient.value = matchingCode.client;
+            }
+
+            function clickedDelete(e) {
+                var td = e.target.parentElement;
+                var tr = td.parentElement;
+                tr.remove();
+                e.preventDefault();
+            }
+        </script>
+    </body>
+</html>
